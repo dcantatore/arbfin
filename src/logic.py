@@ -96,16 +96,44 @@ def process_data(matches: Iterable, include_started_matches: bool = True) -> Gen
         }
 
 
-def get_arbitrage_opportunities(key: str, region: str, cutoff: float, sports: list, live: bool):
+def get_arbitrage_opportunities(key: str, region: str, cutoff: float, sports: list, live: bool, unit: float):
     all_sports = get_sports(key)
 
     # filter by key from returned available sports
-    if len(sports):
+    if sports is not None and len(sports):
         all_sports = {item for item in all_sports if any(search_string in item for search_string in sports)}
 
     data = chain.from_iterable(get_data(key, sport, region=region) for sport in all_sports)
     data = filter(lambda x: x != "message", data)
     results = process_data(data, live)
     arbitrage_opportunities = filter(lambda x: 0 < x["total_implied_odds"] < 1 - cutoff, results)
+    arbitrage_opportunities_list = list(arbitrage_opportunities)
+    # add the bet amounts
+    for match in arbitrage_opportunities_list:
+        match["max_profit"] = {"amount": -8675309, "bet": ""}
+        match["min_profit"] = {"amount": -8675309, "bet": ""}
+        for outcome, odds in match["best_outcome_odds"].items():
+            individual_arb = (1 / odds[1])
+            updated_odds = {
+                "platform": odds[0],
+                "odds": odds[1],
+                "bet_amount": round((individual_arb * unit) / match["total_implied_odds"], 2)
+            }
+            other_bet_totals = unit - updated_odds["bet_amount"]
+            return_amount = round(
+                (round(updated_odds["bet_amount"] * (updated_odds["odds"] - 1), 2)) - other_bet_totals, 2)
 
-    return arbitrage_opportunities
+            #  set the min return if first
+            if match["min_profit"]["amount"] == -8675309:
+                match["min_profit"] = {"amount": return_amount, "bet": outcome}
+            #  set the max return if first
+            if match["max_profit"]["amount"] == -8675309:
+                match["max_profit"] = {"amount": return_amount, "bet": outcome}
+
+            if return_amount > match["max_profit"]["amount"]:
+                match["max_profit"] = {"amount": return_amount, "bet": outcome}
+            if return_amount < match["min_profit"]["amount"]:
+                match["min_profit"] = {"amount": return_amount, "bet": outcome}
+            match["best_outcome_odds"][outcome] = updated_odds
+
+    return arbitrage_opportunities_list

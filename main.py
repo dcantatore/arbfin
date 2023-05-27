@@ -28,7 +28,7 @@ def main():
         help="The region in which to look for arbitrage opportunities."
     )
     parser.add_argument(
-        "-u", "--unformatted",
+        "-j", "--json",
         action="store_true",
         help="If set, turn output into the json dump from the opportunities."
     )
@@ -51,11 +51,21 @@ def main():
         default=os.environ.get("LIVE"),
         help="This defaults to true, set to false to not check live sports. Accepts string as true | false"
     )
+    parser.add_argument(
+        "-u", "--unit",
+        type=float,
+        default=os.environ.get("UNIT"),
+        help="Your betting unit the standard amount you use to bet. Based on this amount we will calculate how much "
+             "you need to wager on each outcome to profit"
+    )
 
     args = parser.parse_args()
 
     if not args.cutoff:
         args.cutoff = 10
+
+    if not args.unit:
+        args.unit = 10
 
     if not args.region:
         args.region = 'us'
@@ -71,12 +81,11 @@ def main():
         args.sports = args.sports.split(" ")
 
     arbitrage_opportunities = get_arbitrage_opportunities(key=args.key, region=args.region, cutoff=cutoff,
-                                                          sports=args.sports, live=live)
+                                                          sports=args.sports, live=live, unit=args.unit)
 
-    if args.unformatted:
-        print(list(arbitrage_opportunities))
+    if args.json:
+        print(arbitrage_opportunities)
     else:
-        arbitrage_opportunities = list(arbitrage_opportunities)
         print(f"In region {args.region} with {args.cutoff} percent margin")
         print(
             f"{len(arbitrage_opportunities)} arbitrage opportunities found {':money-mouth_face:' if len(arbitrage_opportunities) > 0 else ':man_shrugging:'}")
@@ -85,7 +94,12 @@ def main():
             print(f"\t[italic]{arb['match_name']} in {arb['league']} [/italic]")
             print(f"\t\tTotal implied odds: {arb['total_implied_odds']} with these odds:")
             for key, value in arb['best_outcome_odds'].items():
-                print(f"\t\t[bold red]{key}[/bold red] with [green]{value[0]}[/green] for {value[1]}")
+                print(
+                    f"\t\tBet [green]{value['bet_amount']}[/green] on [bold red]{key}[/bold red] with [yellow]{value['platform']}[/yellow] for {value['odds']}")
+            print(
+                f"\t\tMax Profit: [green]{arb['max_profit']['amount']}[/green] with [bold white]{arb['max_profit']['bet']}[/bold white] as the outcome")
+            print(
+                f"\t\tMin Profit: [green]{arb['min_profit']['amount']}[/green] with [bold white]{arb['min_profit']['bet']}[/bold white] as the outcome")
 
 
 if __name__ == '__main__':
