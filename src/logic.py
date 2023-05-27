@@ -79,12 +79,12 @@ def process_data(matches: Iterable, include_started_matches: bool = True) -> Gen
                 outcome_name = outcome["name"]
                 odd = outcome["price"]
                 if outcome_name not in best_odd_per_outcome.keys() or \
-                    odd > best_odd_per_outcome[outcome_name][1]:
+                        odd > best_odd_per_outcome[outcome_name][1]:
                     best_odd_per_outcome[outcome_name] = (bookie_name, odd)
 
-        total_implied_odds = sum(1/i[1] for i in best_odd_per_outcome.values())
+        total_implied_odds = sum(1 / i[1] for i in best_odd_per_outcome.values())
         match_name = f"{match['home_team']} v. {match['away_team']}"
-        time_to_start = (start_time - time.time())/3600
+        time_to_start = (start_time - time.time()) / 3600
         league = match["sport_key"]
         yield {
             "match_name": match_name,
@@ -96,11 +96,16 @@ def process_data(matches: Iterable, include_started_matches: bool = True) -> Gen
         }
 
 
-def get_arbitrage_opportunities(key: str, region: str, cutoff: float):
-    sports = get_sports(key)
-    data = chain.from_iterable(get_data(key, sport, region=region) for sport in sports)
+def get_arbitrage_opportunities(key: str, region: str, cutoff: float, sports: list, live: bool):
+    all_sports = get_sports(key)
+
+    # filter by key from returned available sports
+    if len(sports):
+        all_sports = {item for item in all_sports if any(search_string in item for search_string in sports)}
+
+    data = chain.from_iterable(get_data(key, sport, region=region) for sport in all_sports)
     data = filter(lambda x: x != "message", data)
-    results = process_data(data)
-    arbitrage_opportunities = filter(lambda x: 0 < x["total_implied_odds"] < 1-cutoff, results)
+    results = process_data(data, live)
+    arbitrage_opportunities = filter(lambda x: 0 < x["total_implied_odds"] < 1 - cutoff, results)
 
     return arbitrage_opportunities

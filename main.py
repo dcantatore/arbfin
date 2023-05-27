@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "-r", "--region",
         choices=["eu", "us", "au", "uk"],
-        default="eu",
+        default=os.environ.get("REGION"),
         help="The region in which to look for arbitrage opportunities."
     )
     parser.add_argument(
@@ -35,20 +35,51 @@ def main():
     parser.add_argument(
         "-c", "--cutoff",
         type=float,
-        default=0,
+        default=os.environ.get("CUTOFF"),
         help="The minimum profit margin required for an arb to be displayed. Inputted as a percentage."
     )
+    parser.add_argument(
+        "-s", "--sports",
+        type=str,
+        default=os.environ.get("SPORTS"),
+        help="If set it will only check these sports, please see readme for more details. For cli use format such as "
+             "-s \"mma_mixed_martial_arts americanfootball_nfl\""
+    )
+    parser.add_argument(
+        "-l", "--live",
+        type=str,
+        default=os.environ.get("LIVE"),
+        help="This defaults to true, set to false to not check live sports. Accepts string as true | false"
+    )
+
     args = parser.parse_args()
 
-    cutoff = args.cutoff/100
+    if not args.cutoff:
+        args.cutoff = 10
 
-    arbitrage_opportunities = get_arbitrage_opportunities(key=args.key, region=args.region, cutoff=cutoff)
+    if not args.region:
+        args.region = 'us'
+
+    if args.live:
+        live = args.live == "true"
+    else:
+        live = True
+
+    cutoff = args.cutoff / 100
+
+    if args.sports:
+        args.sports = args.sports.split(" ")
+
+    arbitrage_opportunities = get_arbitrage_opportunities(key=args.key, region=args.region, cutoff=cutoff,
+                                                          sports=args.sports, live=live)
 
     if args.unformatted:
         print(list(arbitrage_opportunities))
     else:
         arbitrage_opportunities = list(arbitrage_opportunities)
-        print(f"{len(arbitrage_opportunities)} arbitrage opportunities found {':money-mouth_face:' if len(arbitrage_opportunities) > 0 else ':man_shrugging:'}")
+        print(f"In region {args.region} with {args.cutoff} percent margin")
+        print(
+            f"{len(arbitrage_opportunities)} arbitrage opportunities found {':money-mouth_face:' if len(arbitrage_opportunities) > 0 else ':man_shrugging:'}")
 
         for arb in arbitrage_opportunities:
             print(f"\t[italic]{arb['match_name']} in {arb['league']} [/italic]")

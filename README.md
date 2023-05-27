@@ -31,5 +31,13 @@ Using the `-u` or `--unformatted` flags will remove the pretty printing and simp
 ### Cutoff
 The `-c` or `--cutoff` allow you to set a minimum profit margin. Should be set as a percentage, so `-c 10` means a 10% profit margin. Defaults to 0 (i.e. any profitable arb will be displayed).
 
+### Sports
+The `-s` or `--sport` allows you to specify a single sport to check. If no sport it will check all
+
+[Sports List](https://the-odds-api.com/sports-odds-data/sports-apis.html)
+
+### Detailed output
+The `-d` or `--detailed` outputs a verbose explanation of your search
+
 ### Help
 The `-h` or `--help` flags will show a short help message with documentation.
